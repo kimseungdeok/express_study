@@ -121,8 +121,7 @@ app.post('/update_process', function(request,response){
           var description = post.description;
           fs.rename(`data/${id}`, `data/${title}`, function(error){
             fs.writeFile(`data/${title}`, description, 'utf8', function(err){
-              response.writeHead(302, {Location: `/?id=${title}`});
-              response.end();
+              response.redirect(`/?id=${title}`);
             })
           });
       });
@@ -138,8 +137,7 @@ app.post('/delete_process', function(request,response){
           var id = post.id;
           var filteredId = path.parse(id).base;
           fs.unlink(`data/${filteredId}`, function(error){
-            response.writeHead(302, {Location: `/`});
-            response.end();
+            response.redirect('/')
           })
       });
 })
