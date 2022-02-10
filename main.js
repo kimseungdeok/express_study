@@ -1,5 +1,7 @@
 var fs = require('fs');
 var template = require('./lib/template.js');
+var path = require('path');
+var sanitizeHtml = require('sanitize-html');
 const express = require('express')
 const app = express()
 const port = 3000
@@ -20,7 +22,27 @@ app.get('/', function(request, response){
 });
 
 app.get('/page/:pageid', function(request, response){
-  response.send(request.params)
+          fs.readdir('./data', function(error, filelist){
+          var filteredId = path.parse(request.params.pageid).base;
+          fs.readFile(`data/${filteredId}`, 'utf8', function(err, description){
+            var title = request.params.pageid;
+            var sanitizedTitle = sanitizeHtml(title);
+            var sanitizedDescription = sanitizeHtml(description, {
+              allowedTags:['h1']
+            });
+            var list = template.list(filelist);
+            var html = template.HTML(sanitizedTitle, list,
+              `<h2>${sanitizedTitle}</h2>${sanitizedDescription}`,
+              ` <a href="/create">create</a>
+                <a href="/update?id=${sanitizedTitle}">update</a>
+                <form action="delete_process" method="post">
+                  <input type="hidden" name="id" value="${sanitizedTitle}">
+                  <input type="submit" value="delete">
+                </form>`
+            );
+            response.send(html);
+          });
+        });
 });
 
 app.listen(port, () => {
@@ -41,17 +63,7 @@ app.listen(port, () => {
 //     var pathname = url.parse(_url, true).pathname;
 //     if(pathname === '/'){
 //       if(queryData.id === undefined){
-//         fs.readdir('./data', function(error, filelist){
-//           var title = 'Welcome';
-//           var description = 'Hello, Node.js';
-//           var list = template.list(filelist);
-//           var html = template.HTML(title, list,
-//             `<h2>${title}</h2>${description}`,
-//             `<a href="/create">create</a>`
-//           );
-//           response.writeHead(200);
-//           response.end(html);
-//         });
+
 //       } else {
 //         fs.readdir('./data', function(error, filelist){
 //           var filteredId = path.parse(queryData.id).base;
