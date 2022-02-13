@@ -11,9 +11,10 @@ const { response } = require('express');
 const app = express()
 const port = 3000
 
+app.use(express.static('public'))// 정적인 파일 서비스
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(compression());
-app.use(function(request,response,next){
+app.get('*', function(request,response,next){
   fs.readdir('./data', function(error, filelist){
     request.list = filelist;
     next();
@@ -28,32 +29,39 @@ app.get('/', function(request, response){
     var description = 'Hello, Node.js';
     var list = template.list(request.list);
     var html = template.HTML(title, list,
-      `<h2>${title}</h2>${description}`,
+      `<h2>${title}</h2>${description}
+      <img src="/images/hello.jpg" style="width:300px; display:block; margin-top:10px">
+      `,
       `<a href="/create">create</a>`
     );
     response.send(html);
   
 });
 
-app.get('/page/:pageid', function(request, response){
+app.get('/page/:pageid', function(request, response, next){
   var filteredId = path.parse(request.params.pageid).base;
   fs.readFile(`data/${filteredId}`, 'utf8', function(err, description){
-    var title = request.params.pageid;
-    var sanitizedTitle = sanitizeHtml(title);
-    var sanitizedDescription = sanitizeHtml(description, {
-      allowedTags:['h1']
-    });
-    var list = template.list(request.list);
-    var html = template.HTML(sanitizedTitle, list,
-      `<h2>${sanitizedTitle}</h2>${sanitizedDescription}`,
-      ` <a href="/create">create</a>
-        <a href="/update/${sanitizedTitle}">update</a>
-        <form action="/delete_process" method="post">
-          <input type="hidden" name="id" value="${sanitizedTitle}">
-          <input type="submit" value="delete">
-        </form>`
-    );
-    response.send(html);
+    if(err){
+      next(err);
+    } else {
+      var title = request.params.pageid;
+      var sanitizedTitle = sanitizeHtml(title);
+      var sanitizedDescription = sanitizeHtml(description, {
+        allowedTags:['h1']
+      });
+      var list = template.list(request.list);
+      var html = template.HTML(sanitizedTitle, list,
+        `<h2>${sanitizedTitle}</h2>${sanitizedDescription}`,
+        ` <a href="/create">create</a>
+          <a href="/update/${sanitizedTitle}">update</a>
+          <form action="/delete_process" method="post">
+            <input type="hidden" name="id" value="${sanitizedTitle}">
+            <input type="submit" value="delete">
+          </form>`
+      );
+      response.send(html);
+    }
+
   });
 
 });
@@ -128,8 +136,11 @@ var post = request.body;
       fs.unlink(`data/${filteredId}`, function(error){
         response.redirect('/')
       })
-})
+});
 
+app.use(function(req, res, next) {
+  res.status(404).send('Sorry cant find that!');
+});
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
